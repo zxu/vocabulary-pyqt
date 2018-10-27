@@ -85,7 +85,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "GRE Vovabulary"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "GRE Vocabulary"))
         self.lineEdit.setText(_translate("MainWindow", "Hello"))
         self.nextButton.setText(_translate("MainWindow", "\n"
 "Next\n"
