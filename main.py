@@ -1,5 +1,5 @@
 import sys
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets, QtGui, QtCore
 import random
 
 import mainwindow  # This file holds our MainWindow and all design related things
@@ -20,6 +20,11 @@ class ExampleApp(QtWidgets.QMainWindow, mainwindow.Ui_MainWindow):
         self.reviewed = set([])
 
         self.nextButton.clicked.connect(self.next_word)
+        self.nextButton.setShortcut(QtGui.QKeySequence(QtGui.QKeySequence(QtCore.Qt.Key_N)))
+
+    def keyPressEvent(self, event):
+        if event.key() < 100:
+            self.next_word()
 
     def next_word(self):
         column_size = self.data.columns.size
@@ -29,6 +34,7 @@ class ExampleApp(QtWidgets.QMainWindow, mainwindow.Ui_MainWindow):
             self.lineEdit.setText(self.data['Word'][idx])
             self.reviewed.add(idx)
             self.statusLabel.setText(" %d of %d reviewed" % (len(self.reviewed), row_size))
+            QtGui.QGuiApplication.clipboard().setText(self.data['Word'][idx])
 
 
 def main():
