@@ -1,44 +1,112 @@
 import sys
-from PyQt5 import QtWidgets, QtGui, QtCore
-import random
 
-import mainwindow  # This file holds our MainWindow and all design related things
+from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QGuiApplication, QKeySequence, QPixmap
+from PyQt5.QtWidgets import QApplication, QAction, QStyle, QMainWindow, QLabel, QFrame, QActionGroup
+
+import mainwindow
+from database import Database
 from dictionary import Dictionary
 
 
-class ExampleApp(QtWidgets.QMainWindow, mainwindow.Ui_MainWindow):
+class ExampleApp(QMainWindow, mainwindow.Ui_MainWindow):
     def __init__(self):
         super(self.__class__, self).__init__()
+        self.database = Database()
+        self.dictionary = Dictionary()
+        self.dictionary.load(database=self.database)
+
+        self.show_marked_only = False
+
         self.setupUi(self)
 
-        self.setWindowIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DesktopIcon))
-        self.nextButton.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_ArrowRight))
+        self.statusLabel = QLabel(self.centralWidget)
+        self.statusLabel.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+        self.statusLabel.setText('Press any key to continue')
+        self.statusLabelRight = QLabel(self.centralWidget)
+        self.statusLabelRight.setFrameStyle(QFrame.NoFrame)
+        self.statusBar.addWidget(self.statusLabel)
+        self.statusBar.addPermanentWidget(self.statusLabelRight)
 
-        dictionary = Dictionary()
-        dictionary.load()
-        self.data = dictionary.data
-        self.reviewed = set([])
-
+        self.nextButton.setIcon(self.style().standardIcon(QStyle.SP_ArrowRight))
         self.nextButton.clicked.connect(self.next_word)
-        self.nextButton.setShortcut(QtGui.QKeySequence(QtGui.QKeySequence(QtCore.Qt.Key_N)))
+        self.nextButton.setShortcut(QKeySequence(QKeySequence(Qt.Key_N)))
+
+        mark_action = QAction(self.style().standardIcon(QStyle.SP_DialogApplyButton), 'Mark', self)
+        mark_action.setShortcut('Ctrl+M')
+        mark_action.triggered.connect(lambda: self.database.mark(self.dictionary.current_word['word'],
+                                                                 self.dictionary.current_word['idx']))
+        mark_action.setStatusTip("Mark current word for later review")
+
+        remove_mark_action = QAction(self.style().standardIcon(QStyle.SP_DialogCancelButton),
+                                     'Un-mark', self)
+        remove_mark_action.setShortcut('Ctrl+U')
+        remove_mark_action.triggered.connect(lambda: self.database.un_mark(self.dictionary.current_word['word']))
+        remove_mark_action.setStatusTip("Remove mark for current word")
+
+        save_reviewed_action = QAction(self.style().standardIcon(QStyle.SP_DialogSaveButton), 'Save', self)
+        save_reviewed_action.setShortcut('Ctrl+S')
+        save_reviewed_action.triggered.connect(self.save_reviewed)
+        save_reviewed_action.setStatusTip("Save current progress")
+
+        show_marked_only_action = QAction('Show Marked Only', self)
+        show_marked_only_action.setStatusTip('Only display marked words')
+        show_marked_only_action.setCheckable(True)
+        show_marked_only_action.setChecked(False)
+        show_marked_only_action.triggered.connect(self.toggle_marked_only)
+
+        self.toolbar = self.addToolBar('Vocabulary')
+        self.toolbar.setIconSize(QSize(16, 16))
+        self.toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
+
+        self.toolbar.addAction(mark_action)
+        self.toolbar.addAction(remove_mark_action)
+        self.toolbar.addSeparator()
+        self.toolbar.addAction(save_reviewed_action)
+
+        menu_bar = self.menuBar()
+        words_menu = menu_bar.addMenu('Words')
+        words_menu.addAction(mark_action)
+        words_menu.addAction(remove_mark_action)
+        words_menu.addSeparator()
+        words_menu.addAction(save_reviewed_action)
+        words_menu.addSeparator()
+        words_menu.addAction(show_marked_only_action)
 
     def keyPressEvent(self, event):
         if event.key() < 100:
             self.next_word()
 
     def next_word(self):
-        column_size = self.data.columns.size
-        row_size = self.data['Word'].size
-        if column_size > 0 and row_size > 0:
-            idx = random.randint(0, row_size - 1)
-            self.lineEdit.setText(self.data['Word'][idx])
-            self.reviewed.add(idx)
-            self.statusLabel.setText(" %d of %d reviewed" % (len(self.reviewed), row_size))
-            QtGui.QGuiApplication.clipboard().setText(self.data['Word'][idx])
+        word = self.dictionary.next_word(self.database.marked_indices if self.show_marked_only else None)
+        if word:
+            self.lineEdit.setText(word['word'])
+            self.statusLabel.setText(' %d of %d reviewed' % (self.dictionary.total_reviewed(),
+                                                             self.dictionary.total_words))
+            marked = self.database.is_marked(word['word'])
+            if marked:
+                self.statusLabelRight.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+                self.statusLabelRight.setPixmap(self.style().standardIcon(
+                    QStyle.SP_DialogApplyButton).pixmap(QSize(16, 16)))
+            else:
+                self.statusLabelRight.setFrameStyle(QFrame.NoFrame)
+                self.statusLabelRight.clear()
+
+            QGuiApplication.clipboard().setText(word['word'])
+
+    def save_reviewed(self):
+        _str = self.dictionary.reviewed_as_string()
+        if _str is None:
+            return
+        self.database.save_settings('reviewed', _str)
+
+    def toggle_marked_only(self):
+        self.show_marked_only = not self.show_marked_only
 
 
 def main():
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
+    app.setWindowIcon(app.style().standardIcon(QStyle.SP_DesktopIcon))
     form = ExampleApp()
     form.show()
     app.exec_()

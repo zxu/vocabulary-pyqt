@@ -76,8 +76,6 @@ class Ui_MainWindow(object):
         self.statusBar = QtWidgets.QStatusBar(MainWindow)
         self.statusBar.setAutoFillBackground(False)
         self.statusBar.setObjectName("statusBar")
-        self.statusLabel = QtWidgets.QLabel(self.centralWidget)
-        self.statusBar.addWidget(self.statusLabel)
         MainWindow.setStatusBar(self.statusBar)
 
         self.retranslateUi(MainWindow)
