@@ -48,8 +48,6 @@ class Dictionary:
         column_size = self.data.columns.size
         row_size = self.data['Word'].size
         if column_size > 0 and row_size > 0:
-            idx = random.randint(0, row_size - 1)
-
             if marked_indices:
                 if len(marked_indices) == 1:
                     idx = marked_indices[0]
@@ -63,6 +61,14 @@ class Dictionary:
                         if randint > len(marked_indices) - 1:
                             randint = 0
                         idx = marked_indices[randint]
+            else:
+                idx = random.randint(0, row_size - 1)
+                if self.reviewed[idx] == 1:
+                    r = range(idx + 1, idx + row_size)
+                    for i in r:
+                        if self.reviewed[i % row_size] == 0:
+                            idx = i % row_size
+                            break
 
             if idx > row_size - 1 or idx < 0:
                 return {}
