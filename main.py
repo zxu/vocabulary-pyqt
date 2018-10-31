@@ -1,8 +1,8 @@
 import sys
 
 from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QGuiApplication, QKeySequence, QPixmap
-from PyQt5.QtWidgets import QApplication, QAction, QStyle, QMainWindow, QLabel, QFrame, QActionGroup
+from PyQt5.QtGui import QGuiApplication, QKeySequence
+from PyQt5.QtWidgets import QApplication, QAction, QStyle, QMainWindow, QLabel, QFrame
 
 import mainwindow
 from database import Database
@@ -55,6 +55,10 @@ class ExampleApp(QMainWindow, mainwindow.Ui_MainWindow):
         show_marked_only_action.setChecked(False)
         show_marked_only_action.triggered.connect(self.toggle_marked_only)
 
+        reset_progress_action = QAction('Reset Progress', self)
+        reset_progress_action.setStatusTip('Reset review progress')
+        reset_progress_action.triggered.connect(self.reset_progress)
+
         self.toolbar = self.addToolBar('Vocabulary')
         self.toolbar.setIconSize(QSize(16, 16))
         self.toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
@@ -72,6 +76,7 @@ class ExampleApp(QMainWindow, mainwindow.Ui_MainWindow):
         words_menu.addAction(save_reviewed_action)
         words_menu.addSeparator()
         words_menu.addAction(show_marked_only_action)
+        words_menu.addAction(reset_progress_action)
 
     def keyPressEvent(self, event):
         if event.key() < 100:
@@ -103,12 +108,17 @@ class ExampleApp(QMainWindow, mainwindow.Ui_MainWindow):
     def toggle_marked_only(self):
         self.show_marked_only = not self.show_marked_only
 
+    def reset_progress(self):
+        self.dictionary.reset_progress()
+
 
 def main():
     app = QApplication(sys.argv)
     app.setWindowIcon(app.style().standardIcon(QStyle.SP_DesktopIcon))
     form = ExampleApp()
     form.show()
+
+    app.aboutToQuit.connect(form.save_reviewed)
     app.exec_()
 
 

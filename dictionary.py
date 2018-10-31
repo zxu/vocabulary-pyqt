@@ -1,8 +1,9 @@
 import base64
 import io
+import random
+
 import numpy as np
 import pandas as pd
-import random
 
 from database import Database
 
@@ -79,8 +80,9 @@ class Dictionary:
         return self.current_word
 
     def reviewed_as_string(self):
-        if np.count_nonzero(self.reviewed) == 0:
-            return None
         output = io.BytesIO()
         np.savez_compressed(output, self.reviewed)
         return output.getvalue()
+
+    def reset_progress(self):
+        self.reviewed = np.zeros((10000,), dtype=int)
