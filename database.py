@@ -7,6 +7,7 @@ class Database:
         self.db = sqlite3.connect('data/words.db')
         self.cursor = self.db.cursor()
         self.marked_indices = []
+        self.marked_indices_set = set()
 
         try:
             self.cursor.execute('CREATE TABLE IF NOT EXISTS `marked` (`word` TEXT, '
@@ -15,6 +16,7 @@ class Database:
                 'CREATE TABLE IF NOT EXISTS `settings` (`type` TEXT, `value` TEXT, PRIMARY KEY(`type`))')
             self.db.commit()
             self.marked_indices = self.load_marked_indices()
+            self.marked_indices_set = set(self.marked_indices)
         except sqlite3.Error:
             self.db.rollback()
 
@@ -25,6 +27,7 @@ class Database:
             self.cursor.execute('INSERT INTO `marked` (`word`, `index`) VALUES (?, ?)', (word, _index))
             self.db.commit()
             self.marked_indices = self.load_marked_indices()
+            self.marked_indices_set = set(self.marked_indices)
         except sqlite3.Error:
             self.db.rollback()
 
@@ -35,6 +38,7 @@ class Database:
             self.cursor.execute('DELETE FROM `marked` where (`word`) = ?', (word,))
             self.db.commit()
             self.marked_indices = self.load_marked_indices()
+            self.marked_indices_set = set(self.marked_indices)
         except sqlite3.Error:
             self.db.rollback()
 
@@ -58,7 +62,7 @@ class Database:
         except sqlite3.Error:
             return None
 
-    def is_marked(self, word):
+    def is_marked(self, word: str):
         if word is None:
             return False
         try:
@@ -70,6 +74,9 @@ class Database:
                 return True
         except sqlite3.Error:
             return False
+
+    def is_marked(self, idx: int):
+        return idx in self.marked_indices_set
 
     def load_marked_indices(self):
         try:

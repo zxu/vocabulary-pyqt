@@ -23,9 +23,14 @@ class ExampleApp(QMainWindow, mainwindow.Ui_MainWindow):
         self.statusLabel = QLabel(self.centralWidget)
         self.statusLabel.setFrameStyle(QFrame.Panel | QFrame.Sunken)
         self.statusLabel.setText('Press any key to continue')
+
+        self.statusLabelMarked = QLabel(self.centralWidget)
+
         self.statusLabelRight = QLabel(self.centralWidget)
         self.statusLabelRight.setFrameStyle(QFrame.NoFrame)
+
         self.statusBar.addWidget(self.statusLabel)
+        self.statusBar.addWidget(self.statusLabelMarked)
         self.statusBar.addPermanentWidget(self.statusLabelRight)
 
         self.nextButton.setIcon(self.style().standardIcon(QStyle.SP_ArrowRight))
@@ -34,14 +39,13 @@ class ExampleApp(QMainWindow, mainwindow.Ui_MainWindow):
 
         mark_action = QAction(self.style().standardIcon(QStyle.SP_DialogApplyButton), 'Mark', self)
         mark_action.setShortcut('Ctrl+M')
-        mark_action.triggered.connect(lambda: self.database.mark(self.dictionary.current_word['word'],
-                                                                 self.dictionary.current_word['idx']))
+        mark_action.triggered.connect(lambda: self.mark_word(True))
         mark_action.setStatusTip("Mark current word for later review")
 
         remove_mark_action = QAction(self.style().standardIcon(QStyle.SP_DialogCancelButton),
                                      'Un-mark', self)
         remove_mark_action.setShortcut('Ctrl+U')
-        remove_mark_action.triggered.connect(lambda: self.database.un_mark(self.dictionary.current_word['word']))
+        remove_mark_action.triggered.connect(lambda: self.mark_word(False))
         remove_mark_action.setStatusTip("Remove mark for current word")
 
         save_reviewed_action = QAction(self.style().standardIcon(QStyle.SP_DialogSaveButton), 'Save', self)
@@ -78,6 +82,8 @@ class ExampleApp(QMainWindow, mainwindow.Ui_MainWindow):
         words_menu.addAction(show_marked_only_action)
         words_menu.addAction(reset_progress_action)
 
+        self.display_total_marked()
+
     def keyPressEvent(self, event):
         if event.key() < 100:
             self.next_word()
@@ -88,16 +94,27 @@ class ExampleApp(QMainWindow, mainwindow.Ui_MainWindow):
             self.lineEdit.setText(word['word'])
             self.statusLabel.setText(' %d of %d reviewed' % (self.dictionary.total_reviewed(),
                                                              self.dictionary.total_words))
-            marked = self.database.is_marked(word['word'])
-            if marked:
-                self.statusLabelRight.setFrameStyle(QFrame.Panel | QFrame.Sunken)
-                self.statusLabelRight.setPixmap(self.style().standardIcon(
-                    QStyle.SP_DialogApplyButton).pixmap(QSize(16, 16)))
-            else:
-                self.statusLabelRight.setFrameStyle(QFrame.NoFrame)
-                self.statusLabelRight.clear()
+            self.highlight_marked(self.database.is_marked(word['idx']))
 
             QGuiApplication.clipboard().setText(word['word'])
+
+    def highlight_marked(self, marked):
+        if marked:
+            self.statusLabelRight.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+            self.statusLabelRight.setPixmap(self.style().standardIcon(
+                QStyle.SP_DialogApplyButton).pixmap(QSize(16, 16)))
+        else:
+            self.statusLabelRight.setFrameStyle(QFrame.NoFrame)
+            self.statusLabelRight.clear()
+
+    def display_total_marked(self):
+        total_marked = len(self.database.marked_indices)
+        if total_marked > 0:
+            self.statusLabelMarked.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+            self.statusLabelMarked.setText('%d marked' % total_marked)
+        else:
+            self.statusLabelMarked.setFrameStyle(QFrame.NoFrame)
+            self.statusLabelMarked.clear()
 
     def save_reviewed(self):
         _str = self.dictionary.reviewed_as_string()
@@ -110,6 +127,20 @@ class ExampleApp(QMainWindow, mainwindow.Ui_MainWindow):
 
     def reset_progress(self):
         self.dictionary.reset_progress()
+
+    def mark_word(self, mark):
+        if self.dictionary.current_word and \
+                'word' in self.dictionary.current_word and 'idx' in self.dictionary.current_word:
+            if mark:
+                self.database.mark(
+                    self.dictionary.current_word['word'],
+                    self.dictionary.current_word['idx']
+                )
+            else:
+                self.database.un_mark(self.dictionary.current_word['word'])
+
+            self.highlight_marked(self.database.is_marked(self.dictionary.current_word['idx']))
+            self.display_total_marked()
 
 
 def main():
